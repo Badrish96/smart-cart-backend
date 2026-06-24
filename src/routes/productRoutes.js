@@ -1,6 +1,6 @@
 const express = require('express');
 const { body } = require('express-validator');
-const { addProduct, updateProduct, deleteProduct, getAllProducts, getProductById } = require('../controllers/productController');
+const { addProduct, updateProduct, deleteProduct, getAllProducts, getProductsByCategory, getProductById } = require('../controllers/productController');
 const { protect } = require('../middleware/auth');
 const { adminOnly } = require('../middleware/adminAuth');
 const { handleUpload } = require('../middleware/upload');
@@ -33,6 +33,7 @@ const productUpdateValidation = [
 
 // Public routes
 router.get('/', getAllProducts);
+router.get('/category/:category', getProductsByCategory);
 router.get('/:id', getProductById);
 
 // Admin-only routes

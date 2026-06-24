@@ -121,6 +121,36 @@ const getAllProducts = async (req, res) => {
   }
 };
 
+const VALID_CATEGORIES = ['Wireless', 'Gaming', 'Wired', 'Professional', 'Premium'];
+
+const getProductsByCategory = async (req, res) => {
+  try {
+    const { category } = req.params;
+
+    if (!VALID_CATEGORIES.includes(category)) {
+      return errorResponse(res, 400, `Invalid category. Must be one of: ${VALID_CATEGORIES.join(', ')}`);
+    }
+
+    const { page = 1, limit = 10 } = req.query;
+    const skip = (Number(page) - 1) * Number(limit);
+
+    const filter = { category, isActive: true };
+
+    const [products, total] = await Promise.all([
+      Product.find(filter).skip(skip).limit(Number(limit)).sort({ createdAt: -1 }),
+      Product.countDocuments(filter),
+    ]);
+
+    return successResponse(res, 200, `Products in category "${category}" fetched successfully`, {
+      category,
+      products,
+      pagination: { total, page: Number(page), limit: Number(limit), pages: Math.ceil(total / limit) },
+    });
+  } catch (error) {
+    return errorResponse(res, 500, 'Server error', error.message);
+  }
+};
+
 const getProductById = async (req, res) => {
   try {
     const product = await Product.findById(req.params.id);
@@ -131,4 +161,4 @@ const getProductById = async (req, res) => {
   }
 };
 
-module.exports = { addProduct, updateProduct, deleteProduct, getAllProducts, getProductById };
+module.exports = { addProduct, updateProduct, deleteProduct, getAllProducts, getProductsByCategory, getProductById };
