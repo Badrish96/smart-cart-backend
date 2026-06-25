@@ -26,4 +26,114 @@ const sendPasswordResetEmail = async (email, resetToken) => {
   });
 };
 
-module.exports = { sendPasswordResetEmail };
+const sendOrderConfirmationEmail = async (email, name, order) => {
+  const itemsHtml = order.items
+    .map(
+      (item) => `
+      <tr>
+        <td style="padding:8px;border-bottom:1px solid #eee">${item.name}</td>
+        <td style="padding:8px;border-bottom:1px solid #eee;text-align:center">${item.quantity}</td>
+        <td style="padding:8px;border-bottom:1px solid #eee;text-align:right">₹${item.effectivePrice.toFixed(2)}</td>
+        <td style="padding:8px;border-bottom:1px solid #eee;text-align:right">₹${(item.effectivePrice * item.quantity).toFixed(2)}</td>
+      </tr>`
+    )
+    .join('');
+
+  const addr = order.shippingAddress;
+
+  await transporter.sendMail({
+    from: `"Smart Cart" <${process.env.EMAIL_USER}>`,
+    to: email,
+    subject: `Order Confirmed — ${order.orderNumber}`,
+    html: `
+      <div style="font-family:Arial,sans-serif;max-width:600px;margin:auto;color:#333">
+        <div style="background:#4CAF50;padding:24px;text-align:center">
+          <h1 style="color:#fff;margin:0">Smart Cart</h1>
+        </div>
+        <div style="padding:24px">
+          <h2>Hi ${name}, your order is confirmed! 🎉</h2>
+          <p>Thank you for shopping with Smart Cart. Your order has been placed and will be delivered soon.</p>
+
+          <table style="width:100%;border-collapse:collapse;margin:16px 0">
+            <tr style="background:#f5f5f5">
+              <th style="padding:8px;text-align:left">Item</th>
+              <th style="padding:8px;text-align:center">Qty</th>
+              <th style="padding:8px;text-align:right">Unit Price</th>
+              <th style="padding:8px;text-align:right">Total</th>
+            </tr>
+            ${itemsHtml}
+          </table>
+
+          <table style="width:100%;margin-top:8px">
+            <tr>
+              <td>Subtotal</td>
+              <td style="text-align:right">₹${order.subtotal.toFixed(2)}</td>
+            </tr>
+            <tr>
+              <td>Shipping</td>
+              <td style="text-align:right">${order.shippingCharge === 0 ? 'FREE' : `₹${order.shippingCharge.toFixed(2)}`}</td>
+            </tr>
+            <tr style="font-weight:bold;font-size:16px">
+              <td>Total</td>
+              <td style="text-align:right">₹${order.totalAmount.toFixed(2)}</td>
+            </tr>
+          </table>
+
+          <hr style="margin:24px 0;border:none;border-top:1px solid #eee"/>
+
+          <h3>Order Details</h3>
+          <p><strong>Order Number:</strong> ${order.orderNumber}</p>
+          <p><strong>Payment Method:</strong> Cash on Delivery</p>
+
+          <h3>Shipping Address</h3>
+          <p>
+            ${addr.fullName}<br/>
+            ${addr.street}, ${addr.city}<br/>
+            ${addr.state} — ${addr.zipCode}<br/>
+            ${addr.country}<br/>
+            📞 ${addr.phone}
+          </p>
+        </div>
+        <div style="background:#f5f5f5;padding:16px;text-align:center;font-size:12px;color:#999">
+          &copy; ${new Date().getFullYear()} Smart Cart. All rights reserved.
+        </div>
+      </div>
+    `,
+  });
+};
+
+const sendOrderStatusEmail = async (email, name, order) => {
+  const statusMessages = {
+    confirmed: 'Your order has been confirmed and is being prepared.',
+    shipped: 'Great news! Your order is on its way.',
+    delivered: 'Your order has been delivered. Enjoy your purchase!',
+    cancelled: `Your order has been cancelled. ${order.cancellationReason ? `Reason: ${order.cancellationReason}` : ''}`,
+  };
+
+  const message = statusMessages[order.orderStatus] || `Your order status is now: ${order.orderStatus}`;
+
+  await transporter.sendMail({
+    from: `"Smart Cart" <${process.env.EMAIL_USER}>`,
+    to: email,
+    subject: `Order ${order.orderNumber} — Status Update`,
+    html: `
+      <div style="font-family:Arial,sans-serif;max-width:600px;margin:auto;color:#333">
+        <div style="background:#4CAF50;padding:24px;text-align:center">
+          <h1 style="color:#fff;margin:0">Smart Cart</h1>
+        </div>
+        <div style="padding:24px">
+          <h2>Hi ${name},</h2>
+          <p>${message}</p>
+          <p><strong>Order Number:</strong> ${order.orderNumber}</p>
+          <p><strong>Status:</strong> ${order.orderStatus.toUpperCase()}</p>
+          ${order.orderStatus === 'delivered' ? '<p>Payment has been marked as received. Thank you!</p>' : ''}
+        </div>
+        <div style="background:#f5f5f5;padding:16px;text-align:center;font-size:12px;color:#999">
+          &copy; ${new Date().getFullYear()} Smart Cart. All rights reserved.
+        </div>
+      </div>
+    `,
+  });
+};
+
+module.exports = { sendPasswordResetEmail, sendOrderConfirmationEmail, sendOrderStatusEmail };
