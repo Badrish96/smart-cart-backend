@@ -2,7 +2,9 @@ const nodemailer = require('nodemailer');
 
 const transporter = nodemailer.createTransport({
   host: process.env.EMAIL_HOST,
-  port: process.env.EMAIL_PORT,
+  port: Number(process.env.EMAIL_PORT),
+  secure: false,
+  requireTLS: true,
   auth: {
     user: process.env.EMAIL_USER,
     pass: process.env.EMAIL_PASS,
@@ -13,7 +15,7 @@ const sendPasswordResetEmail = async (email, resetToken) => {
   const resetURL = `${process.env.CLIENT_URL}/reset-password?token=${resetToken}`;
 
   await transporter.sendMail({
-    from: `"Smart Cart" <${process.env.EMAIL_USER}>`,
+    from: `"Smart Cart" <${process.env.EMAIL_FROM}>`,
     to: email,
     subject: 'Password Reset Request',
     html: `
@@ -42,7 +44,7 @@ const sendOrderConfirmationEmail = async (email, name, order) => {
   const addr = order.shippingAddress;
 
   await transporter.sendMail({
-    from: `"Smart Cart" <${process.env.EMAIL_USER}>`,
+    from: `"Smart Cart" <${process.env.EMAIL_FROM}>`,
     to: email,
     subject: `Order Confirmed — ${order.orderNumber}`,
     html: `
@@ -113,7 +115,7 @@ const sendOrderStatusEmail = async (email, name, order) => {
   const message = statusMessages[order.orderStatus] || `Your order status is now: ${order.orderStatus}`;
 
   await transporter.sendMail({
-    from: `"Smart Cart" <${process.env.EMAIL_USER}>`,
+    from: `"Smart Cart" <${process.env.EMAIL_FROM}>`,
     to: email,
     subject: `Order ${order.orderNumber} — Status Update`,
     html: `
@@ -136,4 +138,52 @@ const sendOrderStatusEmail = async (email, name, order) => {
   });
 };
 
-module.exports = { sendPasswordResetEmail, sendOrderConfirmationEmail, sendOrderStatusEmail };
+const sendOrderCancellationEmail = async (email, name, order) => {
+  const itemsHtml = order.items
+    .map(
+      (item) => `
+      <tr>
+        <td style="padding:8px;border-bottom:1px solid #eee">${item.name}</td>
+        <td style="padding:8px;border-bottom:1px solid #eee;text-align:center">${item.quantity}</td>
+        <td style="padding:8px;border-bottom:1px solid #eee;text-align:right">₹${(item.effectivePrice * item.quantity).toFixed(2)}</td>
+      </tr>`
+    )
+    .join('');
+
+  await transporter.sendMail({
+    from: `"Smart Cart" <${process.env.EMAIL_FROM}>`,
+    to: email,
+    subject: `Order Cancelled — ${order.orderNumber}`,
+    html: `
+      <div style="font-family:Arial,sans-serif;max-width:600px;margin:auto;color:#333">
+        <div style="background:#e53935;padding:24px;text-align:center">
+          <h1 style="color:#fff;margin:0">Smart Cart</h1>
+        </div>
+        <div style="padding:24px">
+          <h2>Hi ${name}, your order has been cancelled.</h2>
+          <p><strong>Order Number:</strong> ${order.orderNumber}</p>
+          ${order.cancellationReason ? `<p><strong>Reason:</strong> ${order.cancellationReason}</p>` : ''}
+          <p>The following items have been removed from your order:</p>
+
+          <table style="width:100%;border-collapse:collapse;margin:16px 0">
+            <tr style="background:#f5f5f5">
+              <th style="padding:8px;text-align:left">Item</th>
+              <th style="padding:8px;text-align:center">Qty</th>
+              <th style="padding:8px;text-align:right">Amount</th>
+            </tr>
+            ${itemsHtml}
+          </table>
+
+          <p style="font-size:16px"><strong>Order Total: ₹${order.totalAmount.toFixed(2)}</strong></p>
+          <p>Since the payment method was <strong>Cash on Delivery</strong>, no amount was charged to you.</p>
+          <p>If you have any questions, feel free to contact our support team.</p>
+        </div>
+        <div style="background:#f5f5f5;padding:16px;text-align:center;font-size:12px;color:#999">
+          &copy; ${new Date().getFullYear()} Smart Cart. All rights reserved.
+        </div>
+      </div>
+    `,
+  });
+};
+
+module.exports = { sendPasswordResetEmail, sendOrderConfirmationEmail, sendOrderStatusEmail, sendOrderCancellationEmail };

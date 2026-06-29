@@ -85,10 +85,15 @@ const resetPassword = async (req, res) => {
     const user = await User.findOne({
       passwordResetToken: hashedToken,
       passwordResetExpires: { $gt: Date.now() },
-    });
+    }).select('+password');
 
     if (!user) {
       return errorResponse(res, 400, 'Reset token is invalid or has expired');
+    }
+
+    const isSamePassword = await user.comparePassword(req.body.password);
+    if (isSamePassword) {
+      return errorResponse(res, 400, 'New password must be different from your current password');
     }
 
     user.password = req.body.password;

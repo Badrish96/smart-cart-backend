@@ -1,7 +1,7 @@
 const Order = require('../models/Order');
 const Cart = require('../models/Cart');
 const Product = require('../models/Product');
-const { sendOrderConfirmationEmail, sendOrderStatusEmail } = require('../utils/email');
+const { sendOrderConfirmationEmail, sendOrderStatusEmail, sendOrderCancellationEmail } = require('../utils/email');
 const { successResponse, errorResponse } = require('../utils/apiResponse');
 
 const FREE_SHIPPING_THRESHOLD = 500;
@@ -151,6 +151,10 @@ const cancelOrder = async (req, res) => {
     order.statusHistory.push({ status: 'cancelled', note: order.cancellationReason });
     await order.save();
 
+    sendOrderCancellationEmail(req.user.email, req.user.name, order).catch((err) =>
+      console.error('Cancellation email error:', err.message)
+    );
+
     return successResponse(res, 200, 'Order cancelled successfully', { order });
   } catch (error) {
     return errorResponse(res, 500, 'Server error', error.message);
@@ -219,7 +223,11 @@ const updateOrderStatus = async (req, res) => {
     order.statusHistory.push({ status, note: note || '' });
     await order.save();
 
-    sendOrderStatusEmail(order.user.email, order.user.name, order).catch(() => {});
+    if (status === 'cancelled') {
+      sendOrderCancellationEmail(order.user.email, order.user.name, order).catch(() => {});
+    } else {
+      sendOrderStatusEmail(order.user.email, order.user.name, order).catch(() => {});
+    }
 
     return successResponse(res, 200, 'Order status updated', { order });
   } catch (error) {
