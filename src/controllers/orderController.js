@@ -73,7 +73,9 @@ const placeOrder = async (req, res) => {
     await Cart.findOneAndDelete({ user: req.user._id });
 
     // Send confirmation email (non-blocking — don't fail the order if email fails)
-    sendOrderConfirmationEmail(req.user.email, req.user.name, order).catch(() => {});
+    sendOrderConfirmationEmail(req.user.email, req.user.name, order).catch((err) =>
+      console.error('[Email] Order confirmation failed:', err.message)
+    );
 
     return successResponse(res, 201, 'Order placed successfully', { order });
   } catch (error) {

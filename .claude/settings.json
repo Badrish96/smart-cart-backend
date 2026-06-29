@@ -1,0 +1,9 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(curl -s https://smart-cart-backend-oqyl.onrender.com/health)",
+      "Bash(curl -s -o /dev/null -w \"%{http_code} %{time_total}s\" https://smart-cart-backend-oqyl.onrender.com/health)",
+      "Bash(curl -s https://smart-cart-backend-oqyl.onrender.com/api/auth/login -X POST -H \"Content-Type: application/json\" -d \"{\\\\\"email\\\\\":\\\\\"test@test.com\\\\\",\\\\\"password\\\\\":\\\\\"test123\\\\\"}\")"
+    ]
+  }
+}
