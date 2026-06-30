@@ -2,6 +2,8 @@ const express = require('express');
 const { body } = require('express-validator');
 const {
   placeOrder,
+  retryPayment,
+  verifyPayment,
   getMyOrders,
   getOrderById,
   cancelOrder,
@@ -28,7 +30,22 @@ const addressValidation = [
 // User routes
 router.get('/', getMyOrders);
 router.get('/:id', getOrderById);
-router.post('/', addressValidation, validate, placeOrder);
+router.post(
+  '/',
+  addressValidation,
+  body('paymentMethod').optional().isIn(['COD', 'Razorpay']).withMessage('paymentMethod must be COD or Razorpay'),
+  validate,
+  placeOrder
+);
+router.post('/:id/retry-payment', retryPayment);
+router.post(
+  '/:id/verify-payment',
+  body('razorpay_order_id').notEmpty().withMessage('razorpay_order_id is required'),
+  body('razorpay_payment_id').notEmpty().withMessage('razorpay_payment_id is required'),
+  body('razorpay_signature').notEmpty().withMessage('razorpay_signature is required'),
+  validate,
+  verifyPayment
+);
 router.post(
   '/:id/cancel',
   body('reason').optional().trim().notEmpty().withMessage('Reason cannot be blank'),

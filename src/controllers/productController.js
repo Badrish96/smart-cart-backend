@@ -93,22 +93,52 @@ const deleteProduct = async (req, res) => {
   }
 };
 
+const SORT_OPTIONS = {
+  priceLowToHigh: { price: 1 },
+  priceHighToLow: { price: -1 },
+  ratingHighToLow: { averageRating: -1 },
+  discountHighToLow: { discount: -1 },
+  newest: { createdAt: -1 },
+  oldest: { createdAt: 1 },
+  nameAZ: { name: 1 },
+  nameZA: { name: -1 },
+};
+
 const getAllProducts = async (req, res) => {
   try {
-    const { category, minPrice, maxPrice, search, page = 1, limit = 10 } = req.query;
+    const {
+      category,
+      brand,
+      minPrice,
+      maxPrice,
+      minRating,
+      inStock,
+      minDiscount,
+      search,
+      sort = 'newest',
+      page = 1,
+      limit = 10,
+    } = req.query;
 
     const filter = { isActive: true };
     if (category) filter.category = category;
+    if (brand) filter.brand = brand;
     if (minPrice || maxPrice) {
       filter.price = {};
       if (minPrice) filter.price.$gte = Number(minPrice);
       if (maxPrice) filter.price.$lte = Number(maxPrice);
     }
+    if (minRating) filter.averageRating = { $gte: Number(minRating) };
+    if (minDiscount) filter.discount = { $gte: Number(minDiscount) };
+    if (inStock === 'true') filter.stock = { $gt: 0 };
+    if (inStock === 'false') filter.stock = 0;
     if (search) filter.name = { $regex: search, $options: 'i' };
+
+    const sortBy = SORT_OPTIONS[sort] || SORT_OPTIONS.newest;
 
     const skip = (Number(page) - 1) * Number(limit);
     const [products, total] = await Promise.all([
-      Product.find(filter).skip(skip).limit(Number(limit)).sort({ createdAt: -1 }),
+      Product.find(filter).skip(skip).limit(Number(limit)).sort(sortBy),
       Product.countDocuments(filter),
     ]);
 
@@ -131,13 +161,25 @@ const getProductsByCategory = async (req, res) => {
       return errorResponse(res, 400, `Invalid category. Must be one of: ${VALID_CATEGORIES.join(', ')}`);
     }
 
-    const { page = 1, limit = 10 } = req.query;
+    const { brand, minPrice, maxPrice, minRating, inStock, minDiscount, sort = 'newest', page = 1, limit = 10 } = req.query;
     const skip = (Number(page) - 1) * Number(limit);
 
     const filter = { category, isActive: true };
+    if (brand) filter.brand = brand;
+    if (minPrice || maxPrice) {
+      filter.price = {};
+      if (minPrice) filter.price.$gte = Number(minPrice);
+      if (maxPrice) filter.price.$lte = Number(maxPrice);
+    }
+    if (minRating) filter.averageRating = { $gte: Number(minRating) };
+    if (minDiscount) filter.discount = { $gte: Number(minDiscount) };
+    if (inStock === 'true') filter.stock = { $gt: 0 };
+    if (inStock === 'false') filter.stock = 0;
+
+    const sortBy = SORT_OPTIONS[sort] || SORT_OPTIONS.newest;
 
     const [products, total] = await Promise.all([
-      Product.find(filter).skip(skip).limit(Number(limit)).sort({ createdAt: -1 }),
+      Product.find(filter).skip(skip).limit(Number(limit)).sort(sortBy),
       Product.countDocuments(filter),
     ]);
 
