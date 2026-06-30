@@ -92,7 +92,7 @@ const sendOrderConfirmationEmail = async (email, name, order) => {
 
           <h3>Order Details</h3>
           <p><strong>Order Number:</strong> ${order.orderNumber}</p>
-          <p><strong>Payment Method:</strong> Cash on Delivery</p>
+          <p><strong>Payment Method:</strong> ${order.paymentMethod === 'Razorpay' ? 'Paid Online (Razorpay)' : 'Cash on Delivery'}</p>
 
           <h3>Shipping Address</h3>
           <p>
@@ -182,7 +182,11 @@ const sendOrderCancellationEmail = async (email, name, order) => {
           </table>
 
           <p style="font-size:16px"><strong>Order Total: ₹${order.totalAmount.toFixed(2)}</strong></p>
-          <p>Since the payment method was <strong>Cash on Delivery</strong>, no amount was charged to you.</p>
+          <p>${
+            order.paymentMethod === 'Razorpay' && order.paymentStatus === 'paid'
+              ? 'Your payment will be refunded to the original payment method within 5-7 business days.'
+              : 'Since the payment method was <strong>Cash on Delivery</strong>, no amount was charged to you.'
+          }</p>
           <p>If you have any questions, feel free to contact our support team.</p>
         </div>
         <div style="background:#f5f5f5;padding:16px;text-align:center;font-size:12px;color:#999">
